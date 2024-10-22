@@ -1,0 +1,65 @@
+import dotenv
+from .custom import *
+
+
+INSTALLED_APPS = [
+    "daphne",
+    "guardian",
+    "polymorphic",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "django.contrib.gis",
+    "parler",
+    "parler_rest",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "django_filters",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
+    "phonenumber_field",
+    # 'cities_light',
+    "django_user_agents",
+    "storages",
+    "minio_storage",
+    "djmoney",
+    "django_seed",
+]
+
+PROJECT_APPS = [
+    "users",
+    "central",
+    "central.users",
+    "customers",
+    "customers.rewards",
+    "core",
+    "core.media",
+    "core.settings",
+    "core.contents",
+    "permissions",
+    "products",
+    "branches",
+    "branches.users",
+    "branches.products",
+    "branches.rewards",
+    "chat",
+    "notifications",
+    "activity",
+    "orders",
+    "offers",
+    "offers.discounts",
+    "offers.classification",
+    "offers.content_marketing",
+    "payments",
+    "reports",
+    "trade_services",
+]
+
+
+INSTALLED_APPS += PROJECT_APPS

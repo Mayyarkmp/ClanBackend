@@ -1,0 +1,94 @@
+services:
+  server:
+    build:
+      context: .
+    container_name: server
+    env_file: &app-environment
+      - .env.docker
+    depends_on: &app-depends-on
+      - redis
+    command: bash -c " python manage.py migrate && python manage.py runserver 0.0.0.0:8000 "
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/healthcheck/" ]
+      interval: 5s
+    ports:
+      - 8000:8000
+    networks: &app-networks
+      - clan
+    volumes: &app-volumes
+      - .:/app
+    user: root
+
+  # worker:
+  #   image: clan-backend
+  #   container_name: worker 
+  #   env_file: *app-environment
+  #   depends_on: *app-depends-on
+  #   command: "celery -A clan worker --loglevel=info --concurrency 1 -E"
+  #   networks: *app-networks
+  #   volumes: *app-volumes
+  #   user: root
+
+  # beat:
+  #   image: clan-backend
+  #   container_name: beat
+  #   env_file: *app-environment
+  #   depends_on: *app-depends-on
+  #   command: "celery -A clan beat -l info"
+  #   networks: *app-networks
+  #   volumes: *app-volumes
+  #   user: root
+
+
+  daphne:
+    build:
+      context: .
+    container_name: daphne
+    env_file: *app-environment
+    environment: *app-environment
+    depends_on: *app-depends-on
+    command: "uvicorn clan.asgi:application --reload --host 0.0.0.0 --port 8001"
+    networks: *app-networks
+    volumes: *app-volumes
+    user: root
+
+  redis:
+    restart: unless-stopped
+    container_name: redis
+    image: redis:latest
+    expose:
+      - 6379
+    networks: *app-networks
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      # - "443:443"
+    volumes:
+      - ./nginx/dev-local.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - server
+    expose:
+      - 80
+      # - 443
+    networks: *app-networks
+
+  db:
+    image: postgis/postgis
+    container_name: db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data/
+    networks:
+      - clan
+
+networks:
+  clan:
+    driver: bridge

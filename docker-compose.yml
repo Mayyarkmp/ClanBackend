@@ -1,0 +1,118 @@
+services:
+  server:
+    image: clan-backend
+    container_name: server
+    env_file: &app-environment
+      - .env.docker
+    depends_on: &app-depends-on
+      - redis
+      - dashboard
+    command: "gunicorn clan.wsgi --bind 0.0.0.0:8000 --workers 4 --threads 4"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/healthcheck/" ]
+      interval: 5s
+    ports:
+      - 8000:8000
+    networks: &app-networks
+      - clan
+    volumes: &app-volumes
+      - .:/app
+    user: root
+
+  # worker:
+  #   image: clan-backend
+  #   container_name: worker 
+  #   env_file: *app-environment
+  #   depends_on: *app-depends-on
+  #   command: "celery -A clan worker --loglevel=info --concurrency 1 -E"
+  #   networks: *app-networks
+  #   volumes: *app-volumes
+  #   user: root
+
+  # beat:
+  #   image: clan-backend
+  #   container_name: beat
+  #   env_file: *app-environment
+  #   depends_on: *app-depends-on
+  #   command: "celery -A clan beat -l info"
+  #   networks: *app-networks
+  #   volumes: *app-volumes
+  #   user: root
+
+
+  daphne:
+    image: clan-backend
+    container_name: daphne
+    env_file: *app-environment
+    environment: *app-environment
+    depends_on: *app-depends-on
+    command: "uvicorn clan.asgi:application --reload --host 0.0.0.0 --port 8001"
+    networks: *app-networks
+    volumes: *app-volumes
+    user: root
+
+  redis:
+    restart: unless-stopped
+    container_name: redis
+    image: redis:latest
+    expose:
+      - 6379
+    networks: *app-networks
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/ssl
+      - ./certbot/www:/var/www/certbot # إضافة هذا المسار لتوفير ملفات التحقق
+    depends_on:
+      - server
+      - daphne
+      - dashboard
+    expose:
+      - 80
+      - 443
+    networks: *app-networks
+
+  # certbot:
+  #   image: certbot/certbot
+  #   container_name: certbot
+  #   volumes:
+  #     - ./certbot/www:/var/www/certbot   # نفس المجلد هنا
+  #     - ./certs:/etc/letsencrypt
+  #     - ./certbot-logs:/var/log/letsencrypt
+  #   command: certonly --webroot --webroot-path=/var/www/certbot -d clan.sa -d backend.clan.sa -d dashboard.clan.sa --email abdulkareemsasah@gmail.com --agree-tos --non-interactive
+  #   depends_on:
+  #     - nginx
+  #   networks: *app-networks
+
+  dashboard:
+    image: clan-dashboard
+    container_name: dashboard
+    environment:
+      NEXT_PUBLIC_BASEURL: https://backend.clan.sa/api/v1/central
+      NEXT_PUBLIC_BASEAPIURL: https://backend.clan.sa/api/v1
+      NEXT_PUBLIC_URL: https://dashboard.clan.sa
+      NODE_ENV: production
+    ports:
+      - 3000:3000
+    command: "npm run start"
+    env_file:
+      - dashboard.env
+    networks: *app-networks
+
+  site:
+    image: clan-site
+    container_name: site
+    ports:
+      - 3001:3000
+    command: "npm run start"
+    networks: *app-networks
+
+networks:
+  clan:
+    driver: bridge

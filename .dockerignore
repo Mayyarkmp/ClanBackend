@@ -1,0 +1,11 @@
+env/
+venv
+.env
+.git
+*.pyc
+.idea
+*.pyo
+*.pyd
+__pycache__/
+data
+tasks.md
